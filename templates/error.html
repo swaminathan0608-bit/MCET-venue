@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}{{ err.code }}{% endblock %}
+{% block content %}
+<div class="narrow card pad" style="text-align:center">
+  <h1 style="font-size:3rem">{{ err.code }}</h1>
+  <p class="mt-2 muted">{{ err.description }}</p>
+  <a class="btn mt-6" href="{{ url_for('home') }}">Go home</a>
+</div>
+{% endblock %}

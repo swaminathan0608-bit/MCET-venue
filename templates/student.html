@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m with context %}
+{% block title %}My bookings{% endblock %}
+{% block content %}
+<div class="row between">
+  <div>
+    <p class="label">Student dashboard</p>
+    <h1 class="mt-1">Hello, {{ me.full_name.split(' ')[0] }}</h1>
+    <p class="muted small mt-1">{{ me.login_id|upper }}{{ ' · ' ~ me.department if me.department }}</p>
+  </div>
+  <div class="row">
+    <a class="btn-outline" href="{{ url_for('availability') }}">📅 View availability</a>
+    <a class="btn" href="{{ url_for('request_venue') }}">＋ Request a venue</a>
+  </div>
+</div>
+
+<div class="grid g3 mt-6">
+  {{ m.stat('Confirmed upcoming', upcoming|length, 'green') }}
+  {{ m.stat('Awaiting approval', pending|length, 'gold') }}
+  {{ m.stat('Total requests', total) }}
+</div>
+
+{% if upcoming %}{% set n = upcoming[0] %}
+<div class="card pad top-green mt-6">
+  <p class="label">Next confirmed event</p>
+  <p class="mt-1" style="font-family:var(--font-display);font-size:1.3rem;font-weight:650">{{ n.event_title }}</p>
+  <p class="muted small">{{ n.venue_name }} · {{ n.start_at|nicedate }} · {{ n.start_at|t12 }} – {{ n.end_at|t12 }}</p>
+</div>
+{% endif %}
+
+<div class="card mt-6">
+  <div class="tabs" style="padding:0 .75rem">
+    <a href="?tab=upcoming" class="{{ 'on' if tab == 'upcoming' }}">Upcoming ({{ upcoming|length }})</a>
+    <a href="?tab=pending" class="{{ 'on' if tab == 'pending' }}">Pending ({{ pending|length }})</a>
+    <a href="?tab=history" class="{{ 'on' if tab == 'history' }}">History ({{ history|length }})</a>
+  </div>
+  {{ m.booking_table(rows, false,
+       {'upcoming': 'No confirmed bookings coming up. Request a venue to get started.',
+        'pending': 'No requests waiting for approval.',
+        'history': 'No past, rejected or cancelled requests.'}.get(tab, ''), request.full_path) }}
+</div>
+{% endblock %}

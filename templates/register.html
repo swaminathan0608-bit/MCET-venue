@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Student registration{% endblock %}
+{% block content %}
+<div class="mid" style="max-width:620px">
+  <div class="card pad">
+    <div class="row"><span class="icon-circle">🎓</span>
+      <div><p class="label">Student</p><h1 style="font-size:1.6rem">Create student account</h1></div></div>
+    <form class="stack mt-6" method="post">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <label class="field"><span class="label">Full name</span><input class="input" name="full_name" required value="{{ form.full_name or '' }}"></label>
+      <div class="grid g2">
+        <label class="field"><span class="label">Roll number</span><input class="input" name="roll_no" required placeholder="e.g. 727622BCS001" style="text-transform:uppercase" value="{{ form.roll_no or '' }}"></label>
+        <label class="field"><span class="label">Department</span>
+          <select class="input" name="department" required>
+            <option value="">Select…</option>
+            {% for d in departments %}<option value="{{ d.code }}" {{ 'selected' if form.department == d.code }}>{{ d.name }}</option>{% endfor %}
+          </select></label>
+      </div>
+      <div class="grid g2">
+        <label class="field"><span class="label">College email</span><input class="input" type="email" name="email" required value="{{ form.email or '' }}"></label>
+        <label class="field"><span class="label">Phone (optional)</span><input class="input" type="tel" name="phone" value="{{ form.phone or '' }}"></label>
+      </div>
+      <div class="grid g2">
+        <label class="field"><span class="label">Password</span><input class="input" type="password" name="password" minlength="8" required></label>
+        <label class="field"><span class="label">Confirm password</span><input class="input" type="password" name="password2" minlength="8" required></label>
+      </div>
+      {% if error %}<p class="small red">{{ error }}</p>{% endif %}
+      <button class="btn" type="submit">Create account</button>
+    </form>
+    <p class="xs muted mt-4">Already registered? <a href="{{ url_for('login', role='student') }}">Sign in</a></p>
+  </div>
+</div>
+{% endblock %}

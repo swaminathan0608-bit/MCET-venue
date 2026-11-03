@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m with context %}
+{% block title %}{{ b.booking_no }}{% endblock %}
+{% block content %}
+<div class="mid">
+  <p><a class="small muted" href="{{ back or url_for('availability', date=b.start_at[:10]) }}">← Back</a></p>
+  <div class="card pad mt-2">
+    <p class="mono xs muted">{{ b.booking_no }}</p>
+    <div class="row mt-1"><h1 style="font-size:1.7rem">{{ b.event_title }}</h1>{{ m.stamp(b.status) }}</div>
+    <dl class="detail mt-6">
+      <dt class="label">Venue</dt><dd>{{ b.venue_name }}</dd>
+      <dt class="label">When</dt><dd>{{ b.start_at|nicedate }} · {{ b.start_at|t12 }} – {{ b.end_at|t12 }}</dd>
+      {% if b.status != 'BLOCKED' %}
+      <dt class="label">Requested by</dt><dd>{{ b.requester_name or '—' }}{{ ' (' ~ b.requester_login|upper ~ ')' if b.requester_login }}</dd>
+      <dt class="label">Department</dt><dd>{{ b.department or '—' }}</dd>
+      <dt class="label">Attendees</dt><dd>{{ b.attendees }} of {{ b.venue_capacity }} seats</dd>
+      <dt class="label">Faculty in-charge</dt><dd>{{ b.faculty_incharge or '—' }}</dd>
+      {% endif %}
+      {% if b.purpose %}<dt class="label">Purpose</dt><dd style="white-space:pre-wrap">{{ b.purpose }}</dd>{% endif %}
+      {% if b.decided_by_name %}<dt class="label">Decided by</dt><dd>{{ b.decided_by_name }}{{ ' · ' ~ (b.decided_at|nicedate) if b.decided_at }}</dd>{% endif %}
+      {% if b.decision_note %}<dt class="label">Note</dt><dd>{{ b.decision_note }}</dd>{% endif %}
+      <dt class="label">Requested on</dt><dd>{{ b.created_at|nicedate }}</dd>
+    </dl>
+
+    {% if rivals %}
+      <div class="verdict warn mt-6 small">⚠ Competes with
+        {% for r in rivals %}<a href="{{ url_for('booking_detail', bid=r.id) }}">{{ r.booking_no }} “{{ r.event_title }}”</a>{{ ', ' if not loop.last }}{% endfor %}.
+        Approving this one declines the others automatically.</div>
+    {% endif %}
+
+    {% if (manage or mine) and upcoming and b.status in ['PENDING', 'APPROVED', 'BLOCKED'] %}
+    <form method="post" class="stack mt-6" style="border-top:1px solid var(--border);padding-top:1rem">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <input type="hidden" name="back" value="{{ back }}">
+      {% if manage %}<textarea class="input" name="note" rows="2" placeholder="Note to the requester (optional)"></textarea>{% endif %}
+      <div class="row" style="justify-content:flex-end">
+        {% if manage and b.status == 'PENDING' %}
+          <button class="btn-outline btn-danger" name="action" value="reject">✕ Reject</button>
+          <button class="btn" name="action" value="approve">✓ Approve</button>
+        {% endif %}
+        <button class="btn-outline" name="action" value="cancel"
+                onclick="return confirm('Are you sure?')">{{ 'Remove block' if b.status == 'BLOCKED' else ('Cancel my booking' if mine else 'Cancel booking') }}</button>
+      </div>
+    </form>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

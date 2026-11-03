@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 240 240" role="img" aria-label="MCET emblem">
+  <defs>
+    <path id="ringTop" d="M 30 120 A 90 90 0 0 1 210 120" />
+    <path id="ringBottom" d="M 19 120 A 101 101 0 0 0 221 120" />
+  </defs>
+  <!-- outer seal -->
+  <circle cx="120" cy="120" r="118" fill="#1b2a5e" />
+  <circle cx="120" cy="120" r="111" fill="none" stroke="#d6a53a" stroke-width="2.5" />
+  <circle cx="120" cy="120" r="74" fill="none" stroke="#d6a53a" stroke-width="2.5" />
+  <text font-family="Georgia, 'Times New Roman', serif" font-size="13.5" font-weight="700" fill="#ffffff" letter-spacing="1.4">
+    <textPath href="#ringTop" xlink:href="#ringTop" startOffset="50%" text-anchor="middle">DR. MAHALINGAM COLLEGE OF</textPath>
+  </text>
+  <text font-family="Georgia, 'Times New Roman', serif" font-size="11.5" font-weight="700" fill="#ffffff" letter-spacing="1.1">
+    <textPath href="#ringBottom" xlink:href="#ringBottom" startOffset="50%" text-anchor="middle">ENGINEERING &amp; TECHNOLOGY</textPath>
+  </text>
+  <!-- inner field -->
+  <circle cx="120" cy="120" r="71" fill="#f7f1e1" />
+  <!-- flame of knowledge -->
+  <path d="M120 58 C 128 70 131 77 126 86 C 123 91 117 91 114 86 C 109 77 113 70 120 58 Z" fill="#b8322a" />
+  <path d="M120 70 C 124 77 124 81 121 85 C 119 87 117 85 117 82 C 116 78 118 75 120 70 Z" fill="#f2c14e" />
+  <!-- hall: pediment + columns -->
+  <path d="M84 104 L120 90 L156 104 Z" fill="#1b2a5e" />
+  <rect x="86" y="106" width="68" height="4" fill="#1b2a5e" />
+  <g fill="#1b2a5e">
+    <rect x="90" y="112" width="6" height="26" />
+    <rect x="104" y="112" width="6" height="26" />
+    <rect x="130" y="112" width="6" height="26" />
+    <rect x="144" y="112" width="6" height="26" />
+  </g>
+  <!-- calendar door: availability -->
+  <rect x="113" y="114" width="14" height="24" rx="1.5" fill="#d6a53a" />
+  <path d="M116 126 l3 3 l5 -6" fill="none" stroke="#1b2a5e" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+  <rect x="82" y="139" width="76" height="5" fill="#1b2a5e" />
+  <!-- monogram -->
+  <text x="120" y="172" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="25" font-weight="700" fill="#1b2a5e" letter-spacing="3">MCET</text>
+  <text x="120" y="184" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="7" font-weight="700" fill="#b8322a" letter-spacing="2">EST. 1998</text>
+</svg>

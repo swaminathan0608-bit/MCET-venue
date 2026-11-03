@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m with context %}
+{% block title %}Availability {{ day }}{% endblock %}
+{% block wide %}wide{% endblock %}
+{% block content %}
+<div class="row between">
+  <div>
+    <p class="label">Live availability</p>
+    <h1 class="mt-1">{{ day|longdate }}</h1>
+    <p class="muted small mt-1">{{ stats.booked }} booked · {{ stats.pending }} awaiting approval · {{ venue_count }} venues.
+      Click an empty slot to request it.</p>
+  </div>
+  <a class="btn" href="{{ url_for('request_venue', date=day) }}">＋ New request</a>
+</div>
+
+<div class="row between mt-6">
+  {{ m.date_stepper('availability', day, prev, next) }}
+  <form class="row" method="get">
+    <input type="hidden" name="date" value="{{ day }}">
+    <input class="input auto" name="q" placeholder="Search venue" value="{{ q }}" style="width:170px">
+    <select class="input auto" name="type" onchange="this.form.submit()">
+      <option value="">All types</option>
+      {% for k, v in VENUE_TYPES.items() %}<option value="{{ k }}" {{ 'selected' if vtype == k }}>{{ v }}</option>{% endfor %}
+    </select>
+    <select class="input auto" name="cap" onchange="this.form.submit()">
+      <option value="0">Any size</option>
+      {% for n in [50, 100, 150, 300, 500] %}<option value="{{ n }}" {{ 'selected' if min_cap == n }}>{{ n }}+ seats</option>{% endfor %}
+    </select>
+    <button class="btn-outline">Filter</button>
+  </form>
+</div>
+<div class="mt-3">{{ m.legend() }}</div>
+<div class="mt-3">{{ m.grid(grid, 'request', request.full_path) }}</div>
+<p class="xs muted mt-2">Your own bookings are outlined in red. The red vertical line marks the current time.</p>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='app.js') }}"></script>{% endblock %}

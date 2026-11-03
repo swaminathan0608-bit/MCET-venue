@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m with context %}
+{% block title %}Hall supervisor{% endblock %}
+{% block wide %}wide{% endblock %}
+{% block content %}
+<div class="row between">
+  <div>
+    <p class="label">Hall supervisor</p>
+    <h1 class="mt-1">{{ me.full_name }}</h1>
+    {% if my_venues %}<p class="muted small mt-1">You look after {{ my_venues|map(attribute='name')|join(', ') }}.</p>{% endif %}
+  </div>
+  {% if my_venues %}
+  <div class="row">
+    <a class="btn-outline" href="{{ url_for('request_venue', kind='block', date=day) }}">🔧 Block a slot</a>
+    <a class="btn" href="{{ url_for('request_venue', date=day) }}">＋ Book a slot</a>
+  </div>
+  {% endif %}
+</div>
+
+{% if not my_venues %}
+  <div class="card pad top-gold mt-6 small">No halls are assigned to you yet. Ask the admin to set you as the supervisor
+    of your venues from <b>Admin → Venues</b>.</div>
+{% else %}
+<div class="grid g3 mt-6">
+  {{ m.stat('Awaiting your decision', pending|length, 'gold') }}
+  {{ m.stat('Events today', today_count) }}
+  {{ m.stat('Upcoming allotments', allotted|length, 'green') }}
+</div>
+
+<section class="mt-8">
+  <h2>Requests awaiting decision</h2>
+  {% if not pending %}
+    <p class="card pad mt-3 muted small">You're all caught up.</p>
+  {% else %}
+  <div class="grid g2 mt-3">
+    {% for b in pending %}
+    <div class="card pad-sm top-gold">
+      <a href="{{ url_for('booking_detail', bid=b.id, back=request.full_path) }}" style="text-decoration:none">
+        <p class="mono xs muted">{{ b.booking_no }}</p>
+        <p style="font-family:var(--font-display);font-size:1.15rem;font-weight:650">{{ b.event_title }}</p>
+      </a>
+      <p class="small mt-1">{{ b.venue_name }} · {{ b.start_at|nicedate }} · <span class="mono xs">{{ b.start_at|t12 }} – {{ b.end_at|t12 }}</span></p>
+      <p class="xs muted">{{ b.requester_name }}{{ ' (' ~ b.requester_login|upper ~ ')' if b.requester_login }} ·
+        {{ b.department or '—' }} · {{ b.attendees }} attendees · Faculty: {{ b.faculty_incharge or '—' }}</p>
+      {% if rivals[b.id] %}
+        <p class="xs red mt-2">⚠ Competes with {{ rivals[b.id]|map(attribute='booking_no')|join(', ') }} — approving this
+          one auto-declines the others.</p>
+      {% endif %}
+      <form method="post" action="{{ url_for('booking_detail', bid=b.id) }}" class="row mt-3" style="justify-content:flex-end">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <input type="hidden" name="back" value="{{ request.full_path }}">
+        <a class="btn-outline" href="{{ url_for('booking_detail', bid=b.id, back=request.full_path) }}">Details</a>
+        <button class="btn-outline btn-danger" name="action" value="reject">✕ Reject</button>
+        <button class="btn" name="action" value="approve">✓ Approve</button>
+      </form>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</section>
+
+<section class="mt-10">
+  <div class="row between"><h2>Schedule of your halls</h2>{{ m.date_stepper('supervisor_dashboard', day, prev, next) }}</div>
+  <div class="mt-3">{{ m.legend() }}</div>
+  <div class="mt-3">{{ m.grid(grid, 'block', request.full_path) }}</div>
+  <p class="xs muted mt-2">Click an empty slot to block it for maintenance.</p>
+</section>
+
+<section class="mt-10">
+  <h2>Upcoming allotments</h2>
+  <div class="card mt-3">{{ m.booking_table(allotted, true, 'Nothing allotted yet.', request.full_path) }}</div>
+</section>
+{% endif %}
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='app.js') }}"></script>{% endblock %}

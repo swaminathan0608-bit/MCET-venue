@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit venue' if v else 'Add venue' }}{% endblock %}
+{% block content %}
+{% set f = form or v or {} %}
+<div class="mid">
+  <p><a class="small muted" href="{{ url_for('admin_dashboard', tab='venues') }}">← Venues</a></p>
+  <div class="card pad mt-2">
+    <h1 style="font-size:1.7rem">{{ 'Edit venue' if v else 'Add venue' }}</h1>
+    <p class="small muted mt-1">Venues appear on the availability grid as soon as they are open.</p>
+    <form class="stack mt-6" method="post">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <div class="grid g3">
+        <label class="field"><span class="label">Code</span><input class="input mono" name="code" required value="{{ f.code or '' }}" style="text-transform:uppercase"></label>
+        <label class="field" style="grid-column:span 2"><span class="label">Name</span><input class="input" name="name" required value="{{ f.name or '' }}"></label>
+      </div>
+      <div class="grid g3">
+        <label class="field"><span class="label">Type</span>
+          <select class="input" name="venue_type">
+            {% for k, l in VENUE_TYPES.items() %}<option value="{{ k }}" {{ 'selected' if (f.venue_type or 'SEMINAR_HALL') == k }}>{{ l }}</option>{% endfor %}
+          </select></label>
+        <label class="field"><span class="label">Block / location</span><input class="input" name="block" value="{{ f.block or '' }}"></label>
+        <label class="field"><span class="label">Seating capacity</span><input class="input" type="number" min="1" name="capacity" required value="{{ f.capacity or 100 }}"></label>
+      </div>
+      <div class="grid g3">
+        <label class="field"><span class="label">Opens</span><input class="input" type="time" name="open_time" required value="{{ f.open_time or '08:00' }}"></label>
+        <label class="field"><span class="label">Closes</span><input class="input" type="time" name="close_time" required value="{{ f.close_time or '18:00' }}"></label>
+        <label class="field"><span class="label">Hall supervisor</span>
+          <select class="input" name="supervisor_id">
+            <option value="">— none —</option>
+            {% for s in staff %}<option value="{{ s.id }}" {{ 'selected' if (f.supervisor_id or '')|string == s.id|string }}>{{ s.full_name }} ({{ s.role }})</option>{% endfor %}
+          </select></label>
+      </div>
+      <label class="field"><span class="label">Facilities (comma separated)</span><input class="input" name="facilities" value="{{ f.facilities or 'Projector, Sound system' }}"></label>
+      <label class="field"><span class="label">Description</span><textarea class="input" name="description" rows="2">{{ f.description or '' }}</textarea></label>
+      <label class="check-row"><input type="checkbox" name="is_active" value="1" {{ 'checked' if (not v and not form) or f.is_active }}> Open for booking</label>
+      {% if error %}<p class="small red">{{ error }}</p>{% endif %}
+      <div class="row" style="justify-content:space-between">
+        {% if v %}<button class="btn-outline btn-danger" name="delete" value="1" formnovalidate
+           onclick="return confirm('Delete {{ v.name }}? All of its bookings are deleted too. Consider unticking “Open for booking” instead.')">Delete venue</button>{% else %}<span></span>{% endif %}
+        <div class="row"><a class="btn-outline" href="{{ url_for('admin_dashboard', tab='venues') }}">Cancel</a><button class="btn">Save venue</button></div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

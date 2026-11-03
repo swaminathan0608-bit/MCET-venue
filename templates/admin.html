@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m with context %}
+{% block title %}Admin{% endblock %}
+{% block wide %}wide{% endblock %}
+{% block content %}
+<div class="row between">
+  <div><p class="label">Administration</p><h1 class="mt-1">Venue control room</h1></div>
+  <div class="row">
+    <a class="btn-outline" href="{{ url_for('availability') }}">📅 Availability</a>
+    <a class="btn-outline" href="{{ url_for('request_venue', kind='block') }}">🔧 Block slot</a>
+    <a class="btn" href="{{ url_for('request_venue') }}">＋ Allot / book</a>
+  </div>
+</div>
+<div class="tabs mt-6">
+  {% for t in ['overview', 'requests', 'venues', 'users', 'reports'] %}
+    <a href="{{ url_for('admin_dashboard', tab=t) }}" class="{{ 'on' if tab == t }}">{{ t|capitalize }}</a>
+  {% endfor %}
+</div>
+<div class="mt-6">
+
+{# ------------------------------ OVERVIEW ------------------------------ #}
+{% if tab == 'overview' %}
+  <div class="grid g4">
+    {{ m.stat('Open venues', venue_count) }}
+    {{ m.stat('Pending requests', pending|length, 'gold') }}
+    {{ m.stat('Events today', today_events, 'green') }}
+    {{ m.stat('Registered students', students) }}
+  </div>
+  {% if contested or stale or unassigned %}
+  <div class="card pad top-red mt-6">
+    <h3>⚠ Needs attention</h3>
+    <ul class="small mt-2" style="padding-left:1.1rem;margin-bottom:0">
+      {% if contested %}<li><b>{{ contested|length }}</b> pending requests compete for the same slot — approving one auto-declines the others.</li>{% endif %}
+      {% if stale %}<li><b>{{ stale|length }}</b> pending requests start within 48 hours and have no decision yet.</li>{% endif %}
+      {% if unassigned %}<li><b>{{ unassigned|length }}</b> venues have no hall supervisor ({{ unassigned|map(attribute='code')|join(', ') }}) — only admins can approve their requests.</li>{% endif %}
+    </ul>
+  </div>
+  {% endif %}
+  <div class="row between mt-8"><h2>Today across campus</h2>{{ m.legend() }}</div>
+  <div class="mt-3">{{ m.grid(grid, 'request', request.full_path) }}</div>
+  <h2 class="mt-8">Oldest pending requests</h2>
+  <div class="card mt-3">{{ m.booking_table(oldest, true, 'No pending requests.', request.full_path) }}</div>
+
+{# ------------------------------ REQUESTS ------------------------------ #}
+{% elif tab == 'requests' %}
+  <form class="row" method="get" style="align-items:flex-end">
+    <input type="hidden" name="tab" value="requests">
+    <label class="field"><span class="label">Status</span>
+      <select class="input auto" name="status">
+        <option value="">All</option>
+        {% for s, l in STATUS_LABEL.items() %}<option value="{{ s }}" {{ 'selected' if status == s }}>{{ l }}</option>{% endfor %}
+      </select></label>
+    <label class="field"><span class="label">Venue</span>
+      <select class="input auto" name="venue">
+        <option value="">All venues</option>
+        {% for v in all_venues %}<option value="{{ v.id }}" {{ 'selected' if vid == v.id|string }}>{{ v.name }}</option>{% endfor %}
+      </select></label>
+    <label class="field"><span class="label">From</span><input class="input auto" type="date" name="from" value="{{ dfrom }}"></label>
+    <label class="field"><span class="label">To</span><input class="input auto" type="date" name="to" value="{{ dto }}"></label>
+    <label class="field"><span class="label">Search</span><input class="input auto" name="q" value="{{ q }}" placeholder="No., event, name, roll no."></label>
+    <button class="btn">Apply</button>
+  </form>
+  <div class="card mt-4">{{ m.booking_table(rows, true, 'No bookings match these filters.', request.full_path) }}</div>
+  <p class="xs muted mt-2">{{ rows|length }} shown. Open a row to approve, reject or cancel it.</p>
+
+{# ------------------------------ VENUES ------------------------------ #}
+{% elif tab == 'venues' %}
+  <div class="row between">
+    <p class="small muted">{{ all_venues|length }} venues · {{ all_venues|rejectattr('supervisor_id')|list|length }} without a supervisor</p>
+    <a class="btn" href="{{ url_for('admin_venue') }}">＋ Add venue</a>
+  </div>
+  <div class="card mt-3 table-wrap">
+    <table class="tbl">
+      <thead><tr>{% for h in ['Code', 'Venue', 'Type', 'Seats', 'Hours', 'Supervisor', 'Status', ''] %}<th class="label">{{ h }}</th>{% endfor %}</tr></thead>
+      <tbody>
+      {% for v in all_venues %}
+        <tr>
+          <td class="mono xs">{{ v.code }}</td>
+          <td><b style="font-weight:500">{{ v.name }}</b><span class="sub">{{ v.block }}</span></td>
+          <td>{{ VENUE_TYPES.get(v.venue_type, v.venue_type) }}</td>
+          <td class="mono">{{ v.capacity }}</td>
+          <td class="mono xs">{{ v.open_time }}–{{ v.close_time }}</td>
+          <td class="{{ '' if v.supervisor_id else 'red' }}">{{ v.supervisor_name or 'Not assigned' }}</td>
+          <td><span class="stamp {{ 'st-APPROVED' if v.is_active else 'st-CANCELLED' }}">{{ 'Open' if v.is_active else 'Inactive' }}</span></td>
+          <td style="text-align:right"><a class="btn-outline" href="{{ url_for('admin_venue', vid=v.id) }}">Edit</a></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+{# ------------------------------ USERS ------------------------------ #}
+{% elif tab == 'users' %}
+  <div class="grid" style="grid-template-columns:minmax(0,1fr) 340px;align-items:start" id="users-layout">
+    <div>
+      <form class="row" method="get">
+        <input type="hidden" name="tab" value="users">
+        <input class="input auto" name="q" value="{{ q }}" placeholder="Search name / ID / email">
+        <select class="input auto" name="role" onchange="this.form.submit()">
+          <option value="">All roles ({{ counts.values()|sum }})</option>
+          {% for r in ['student', 'supervisor', 'admin'] %}<option value="{{ r }}" {{ 'selected' if role == r }}>{{ ROLE_META[r].label }} ({{ counts[r] }})</option>{% endfor %}
+        </select>
+        <button class="btn-outline">Search</button>
+      </form>
+      <div class="card mt-3 table-wrap">
+        <table class="tbl">
+          <thead><tr>{% for h in ['Name', 'Login', 'Role', 'Dept', 'Halls', 'Actions'] %}<th class="label">{{ h }}</th>{% endfor %}</tr></thead>
+          <tbody>
+          {% for u in users %}
+            <tr>
+              <td><b style="font-weight:500">{{ u.full_name }}</b></td>
+              <td><span class="mono xs">{{ u.login_id|upper }}</span><span class="sub">{{ u.email or '' }}</span></td>
+              <td>
+                {% if u.id == me.id %}{{ ROLE_META[u.role].label }} (you){% else %}
+                <form method="post" action="{{ url_for('admin_user_action', uid=u.id, action='role') }}">
+                  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                  <select class="input auto" name="role" style="padding:.25rem .4rem;font-size:.8rem"
+                          onchange="if (confirm('Change role of {{ u.full_name }}?')) this.form.submit(); else this.value='{{ u.role }}';">
+                    {% for r in ['student', 'supervisor', 'admin'] %}<option value="{{ r }}" {{ 'selected' if u.role == r }}>{{ ROLE_META[r].label }}</option>{% endfor %}
+                  </select>
+                </form>{% endif %}
+              </td>
+              <td>{{ u.department or '—' }}</td>
+              <td class="mono xs">{{ halls.get(u.id, [])|join(', ') or '—' }}</td>
+              <td>
+                <details class="inline"><summary class="linkbtn">Reset password</summary>
+                  <form method="post" action="{{ url_for('admin_user_action', uid=u.id, action='reset') }}" class="row mt-1">
+                    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                    <input class="input auto" name="password" minlength="8" placeholder="New password" style="width:140px;padding:.3rem .5rem" required>
+                    <button class="btn-outline" style="padding:.3rem .6rem">Set</button>
+                  </form></details>
+                {% if u.id != me.id %}
+                <form method="post" action="{{ url_for('admin_user_action', uid=u.id, action='delete') }}"
+                      onsubmit="return confirm('Delete the account of {{ u.full_name }}? This cannot be undone.')">
+                  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                  <button class="linkbtn red" style="color:var(--red)">Delete</button>
+                </form>{% endif %}
+              </td>
+            </tr>
+          {% else %}<tr><td colspan="6" class="empty">No users match.</td></tr>{% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card pad">
+      <h3>Add supervisor / admin</h3>
+      <p class="xs muted mt-1">Staff sign in with a staff ID. Students register themselves.</p>
+      <form class="stack mt-4" method="post" action="{{ url_for('admin_user_new') }}">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <label class="field"><span class="label">Role</span>
+          <select class="input" name="role"><option value="supervisor">Hall Supervisor</option><option value="admin">Admin</option></select></label>
+        <label class="field"><span class="label">Full name</span><input class="input" name="full_name" required></label>
+        <label class="field"><span class="label">Staff ID</span><input class="input mono" name="login_id" placeholder="e.g. sup-ece" required></label>
+        <label class="field"><span class="label">Department</span>
+          <select class="input" name="department"><option value="">—</option>
+            {% for d in departments %}<option value="{{ d.code }}">{{ d.code }} — {{ d.name }}</option>{% endfor %}</select></label>
+        <label class="field"><span class="label">Phone</span><input class="input" name="phone"></label>
+        <label class="field"><span class="label">Initial password (min 8)</span><input class="input mono" name="password" minlength="8" required></label>
+        <button class="btn">Create account</button>
+      </form>
+    </div>
+  </div>
+  <style>@media (max-width: 900px) { #users-layout { grid-template-columns: minmax(0,1fr) !important; } }</style>
+
+{# ------------------------------ REPORTS ------------------------------ #}
+{% elif tab == 'reports' %}
+  <div class="row between">
+    <form class="row" method="get" style="align-items:flex-end">
+      <input type="hidden" name="tab" value="reports">
+      <label class="field"><span class="label">From</span><input class="input auto" type="date" name="from" value="{{ dfrom }}"></label>
+      <label class="field"><span class="label">To</span><input class="input auto" type="date" name="to" value="{{ dto }}"></label>
+      <button class="btn-outline">Apply</button>
+    </form>
+    <a class="btn" href="{{ url_for('admin_export', **{'from': dfrom, 'to': dto}) }}">⬇ Export Excel</a>
+  </div>
+  <div class="grid g4 mt-6">
+    {{ m.stat('Requests in period', requests) }}
+    {{ m.stat('Approved events', approved_count, 'green') }}
+    {{ m.stat('Clashes auto-declined', auto_rejected, 'red') }}
+    {{ m.stat('Avg. decision time', '%.1f h'|format(avg_hours)) }}
+  </div>
+  <div class="grid g2 mt-6">
+    <div class="card pad">
+      <h3>Utilisation by venue</h3><p class="xs muted">% of open hours booked</p>
+      <div class="bars mt-4">
+        {% for v in per_venue %}
+          <div class="bar" title="{{ v.name }} — {{ v.hours }} h"><span class="mono xs">{{ v.code }}</span>
+            <span class="b"><i style="width:{{ [v.pct, 100]|min }}%"></i></span><span class="mono xs">{{ v.pct }}% · {{ v.hours }}h</span></div>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="card pad">
+      <h3>Approved bookings by department</h3><p class="xs muted">&nbsp;</p>
+      <div class="bars mt-4">
+        {% for d, c in per_dept %}
+          <div class="bar alt"><span class="mono xs">{{ d }}</span>
+            <span class="b"><i style="width:{{ (c / max_dept * 100)|round }}%"></i></span><span class="mono xs">{{ c }}</span></div>
+        {% else %}<p class="empty">No approved bookings in this period.</p>{% endfor %}
+      </div>
+    </div>
+    <div class="card pad" style="grid-column:1/-1">
+      <h3>Requests by outcome</h3>
+      <div class="bars mt-4">
+        {% for s, c in per_status.items() %}
+          <div class="bar"><span>{{ m.stamp(s) }}</span>
+            <span class="b"><i style="width:{{ (c / max_status * 100)|round }}%"></i></span><span class="mono xs">{{ c }}</span></div>
+        {% else %}<p class="empty">No bookings in this period.</p>{% endfor %}
+      </div>
+    </div>
+  </div>
+{% endif %}
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='app.js') }}"></script>{% endblock %}

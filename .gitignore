@@ -1,0 +1,4 @@
+mcet_venue.db
+.secret_key
+__pycache__/
+.venv/

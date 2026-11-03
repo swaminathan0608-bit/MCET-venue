@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}{{ meta.label }} login{% endblock %}
+{% block content %}
+<div class="narrow">
+  <div class="role-switch">
+    {% for r in ['student', 'supervisor', 'admin'] %}
+      <a href="{{ url_for('login', role=r) }}" class="{{ 'on' if r == role }}">{{ ROLE_META[r].label }}</a>
+    {% endfor %}
+  </div>
+  <div class="card pad">
+    <div class="row"><span class="icon-circle">{{ meta.icon }}</span>
+      <div><p class="label">{{ meta.label }}</p><h1 style="font-size:1.6rem">Sign in</h1></div></div>
+    <form class="stack mt-6" method="post">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <label class="field"><span class="label">{{ meta.id_label }}</span>
+        <input class="input" name="ident" required autofocus autocomplete="username" value="{{ request.form.ident or '' }}"></label>
+      <label class="field"><span class="label">Password</span>
+        <input class="input" type="password" name="password" required autocomplete="current-password"></label>
+      {% if error %}<p class="small red">{{ error }}</p>{% endif %}
+      <button class="btn" type="submit">Sign in as {{ meta.label }}</button>
+    </form>
+    <div class="row between mt-4 xs muted">
+      {% if role == 'student' %}<a href="{{ url_for('register') }}">New student? Register</a>{% endif %}
+      <span>Forgot password? Ask the admin office to reset it.</span>
+    </div>
+    {% if role == 'supervisor' %}<p class="xs muted mt-4">Hall supervisor accounts are created by the admin.</p>{% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,91 @@
+{% macro stamp(status) -%}
+<span class="stamp st-{{ status }}">{{ STATUS_LABEL[status] }}</span>
+{%- endmacro %}
+
+{% macro legend() -%}
+<div class="legend">
+  <span><i class="sw-free"></i>Free</span><span><i class="sw-booked"></i>Booked</span>
+  <span><i class="sw-pending"></i>Pending approval</span><span><i class="hatch"></i>Blocked / maintenance</span>
+</div>
+{%- endmacro %}
+
+{% macro stat(label, value, cls='') -%}
+<div class="card pad-sm stat"><p class="label">{{ label }}</p><p class="value {{ cls }}">{{ value }}</p></div>
+{%- endmacro %}
+
+{# Venues × hours timeline. click_kind: 'request' | 'block' | none #}
+{% macro grid(g, click_kind='request', back='') -%}
+{% if not g %}<div class="card empty">No venues to show.</div>{% else %}
+<div class="card avail" data-start="{{ g.day_start }}" data-end="{{ g.day_end }}" data-date="{{ g.date }}" data-kind="{{ click_kind }}">
+  <div class="inner">
+    <div class="hdr">
+      <div class="name label" style="padding-top:.55rem">Venue</div>
+      <div class="track">{% for h in g.hours %}<span class="hour" style="left:{{ h.left }}%">{{ h.label }}</span>{% endfor %}</div>
+      <div class="spacer"></div>
+    </div>
+    {% for r in g.rows %}
+    <div class="vrow">
+      <div class="name">
+        <b title="{{ r.v.name }}">{{ r.v.name }}</b>
+        <span>👥 {{ r.v.capacity }} · {{ VENUE_TYPES.get(r.v.venue_type, r.v.venue_type) }}</span>
+      </div>
+      <div class="track {{ 'static' if not click_kind }}" style="height:{{ r.height }}px" data-venue="{{ r.v.id }}"
+           data-open="{{ r.v.open_time }}" data-close="{{ r.v.close_time }}">
+        {% for h in g.hours %}<span class="line" style="left:{{ h.left }}%"></span>{% endfor %}
+        {% if r.closed_before > 0 %}<span class="closed" style="left:0;width:{{ r.closed_before }}%" title="Closed"></span>{% endif %}
+        {% if r.closed_after < 100 %}<span class="closed" style="left:{{ r.closed_after }}%;right:0" title="Closed"></span>{% endif %}
+        {% if g.now %}<span class="now" style="left:{{ g.now }}%"></span>{% endif %}
+        {% for it in r.slots %}
+          {% set b = it.b %}
+          {% set stacked = b.status == 'PENDING' and r.lanes > 1 %}
+          {% set h = 22 if stacked else r.height - 8 %}
+          <a class="slot {{ b.status }} {{ 'hatch' if b.status == 'BLOCKED' }} {{ 'mine' if it.mine }}"
+             href="{{ url_for('booking_detail', bid=b.id, back=back) }}"
+             style="left:{{ it.left }}%;width:{{ it.width }}%;top:{{ 4 + it.lane * 26 if stacked else 4 }}px;height:{{ h }}px"
+             title="{{ b.booking_no }} · {{ b.event_title }}&#10;{{ b.start_at|t12 }} – {{ b.end_at|t12 }} · {{ STATUS_LABEL[b.status] }}{{ ' · ' ~ b.department if b.department }}">
+            <b>{{ '🔧 ' if b.status == 'BLOCKED' }}{{ b.event_title }}</b>
+            {% if h > 30 %}<span>{{ b.start_at|t12 }}–{{ b.end_at|t12 }}{{ ' · ' ~ b.department if b.department }}</span>{% endif %}
+          </a>
+        {% endfor %}
+      </div>
+      <div class="spacer"></div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+{%- endmacro %}
+
+{% macro booking_table(rows, show_requester=true, empty='Nothing here yet.', back='') -%}
+{% if not rows %}<p class="empty">{{ empty }}</p>{% else %}
+<div class="table-wrap"><table class="tbl">
+  <thead><tr>
+    <th class="label">No.</th><th class="label">Event</th><th class="label">Venue</th><th class="label">When</th>
+    {% if show_requester %}<th class="label">Requested by</th>{% endif %}<th class="label">Status</th>
+  </tr></thead>
+  <tbody>
+  {% for b in rows %}
+    <tr class="click" onclick="location.href='{{ url_for('booking_detail', bid=b.id, back=back) }}'">
+      <td class="mono xs">{{ b.booking_no }}</td>
+      <td><b style="font-weight:500">{{ b.event_title }}</b>
+        {% if b.status != 'BLOCKED' %}<span class="sub">{{ b.attendees }} attendees{{ ' · ' ~ b.department if b.department }}</span>{% endif %}</td>
+      <td>{{ b.venue_name }}</td>
+      <td style="white-space:nowrap">{{ b.start_at|nicedate }}<span class="sub mono">{{ b.start_at|t12 }} – {{ b.end_at|t12 }}</span></td>
+      {% if show_requester %}<td>{{ b.requester_name or '—' }}<span class="sub">{{ b.requester_role or '' }}{{ ' · ' ~ b.requester_login|upper if b.requester_login }}</span></td>{% endif %}
+      <td>{{ stamp(b.status) }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+{% endif %}
+{%- endmacro %}
+
+{% macro date_stepper(endpoint, day, prev, next, extra={}) -%}
+<form class="row" method="get" action="{{ url_for(endpoint) }}">
+  {% for k, v in extra.items() %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
+  <a class="btn-outline" href="{{ url_for(endpoint, date=prev, **extra) }}" aria-label="Previous day">‹</a>
+  <input class="input auto" type="date" name="date" value="{{ day }}" onchange="this.form.submit()">
+  <a class="btn-outline" href="{{ url_for(endpoint, date=next, **extra) }}" aria-label="Next day">›</a>
+  <a class="btn-outline" href="{{ url_for(endpoint, **extra) }}">Today</a>
+</form>
+{%- endmacro %}
